@@ -1,0 +1,375 @@
+<div class="periodic-table px-4 py-3" cdkDropListGroup>
+  <div
+    cdkDropList
+    [cdkDropListData]="dropList"
+    (cdkDropListDropped)="drop($event)"
+  >
+    <div
+      class="d-flex periodic-table__row"
+      [class.periodic-table__row--last]="lastRow"
+      *ngFor="let row of mainRows; last as lastRow"
+    >
+      <ng-container
+        *ngFor="let col of mainColumns; last as lastCol; index as colIndex"
+      >
+        <ng-container
+          *ngTemplateOutlet="
+            paintMyBox;
+            context: {
+              row: row,
+              col: col,
+              lastCol: lastCol,
+              colIndex: colIndex,
+              itemsRow: mainElements[row]
+            }
+          "
+        ></ng-container>
+      </ng-container>
+    </div>
+    <div class="d-flex periodic-table__row periodic-table__row--lanthanides">
+      <ng-container
+        *ngFor="
+          let col of lanthanidesColumns;
+          last as lastCol;
+          index as colIndex
+        "
+      >
+        <ng-container
+          *ngTemplateOutlet="
+            paintMyBox;
+            context: {
+              row: 1,
+              col: col,
+              lastCol: lastCol,
+              colIndex: colIndex,
+              itemsRow: lanthanides,
+              ignoreSpecial: true
+            }
+          "
+        ></ng-container>
+      </ng-container>
+    </div>
+    <div class="d-flex periodic-table__row periodic-table__row--actinides">
+      <ng-container
+        *ngFor="let col of actinidesColumns; last as lastCol; index as colIndex"
+      >
+        <ng-container
+          *ngTemplateOutlet="
+            paintMyBox;
+            context: {
+              row: 1,
+              col: col,
+              lastCol: lastCol,
+              colIndex: colIndex,
+              itemsRow: actinides,
+              ignoreSpecial: true
+            }
+          "
+        ></ng-container>
+      </ng-container>
+    </div>
+  </div>
+  <!-- Absolute positioned element to show on hover -->
+  <div
+    *ngIf="hoveredElement"
+    class="position-absolute"
+    [style.top]="hoveredElementYPosition"
+    [style.left]="hoveredElementXPosition"
+  >
+    <ng-container
+      *ngTemplateOutlet="
+        singleElementHighlightedTpl;
+        context: {
+          item: hoveredElement
+        }
+      "
+    ></ng-container>
+  </div>
+</div>
+<div class="d-flex align-items-center">
+  <div ngbDropdown class="d-inline-block ms-3">
+    <button
+      type="button"
+      class="btn btn-outline-primary"
+      id="dropdownBasic1"
+      ngbDropdownToggle
+    >
+      {{ modeLabel || '--- Select One ---' }}
+    </button>
+    <div ngbDropdownMenu>
+      <button
+        *ngFor="let dropdownOption of dropdownOptions"
+        ngbDropdownItem
+        (click)="setMode(dropdownOption)"
+      >
+        {{ dropdownOption.label }}
+      </button>
+    </div>
+  </div>
+  <a *ngIf="mode" class="ms-3 cursor-pointer" (click)="setMode()">Reset</a>
+  <a
+    *ngIf="mode === modes.WHO_AM_I"
+    class="ms-3 cursor-pointer"
+    (click)="selectNextWhoAmI()"
+    >{{ nextWhoAmI ? 'Next' : 'Start' }}</a
+  >
+</div>
+<div
+  class="all-elements periodic-table"
+  *ngIf="mode === modes.FIND_MY_POSITION"
+>
+  <div
+    cdkDropList
+    [cdkDropListData]="allRandomElements"
+    (cdkDropListDropped)="drop($event)"
+    class="d-flex flex-wrap"
+  >
+    <ng-container *ngFor="let elementCopy of allRandomElements">
+      <div
+        cdkDrag
+        class="
+          d-flex
+          periodic-table__element periodic-table__element--regular
+          align-items-center
+          justify-content-center
+          cursor-pointer
+        "
+      >
+        {{ elementCopy?.symbol }}
+        <span class="periodic-table__name text-truncate">{{
+          elementCopy?.name
+        }}</span>
+      </div>
+    </ng-container>
+  </div>
+</div>
+
+<!-- Template to paint the box as per mode -->
+<ng-template
+  #paintMyBox
+  let-row="row"
+  let-col="col"
+  let-lastCol="lastCol"
+  let-colIndex="colIndex"
+  let-itemsRow="itemsRow"
+  let-ignoreSpecial="ignoreSpecial"
+>
+  <ng-container *ngIf="!mode">
+    <ng-container
+      *ngTemplateOutlet="
+        singleElementTpl;
+        context: {
+          item: itemsRow[col],
+          lastCol: lastCol,
+          colIndex: colIndex,
+          ignoreSpecial: ignoreSpecial,
+          highlightOnHover: true
+        }
+      "
+    ></ng-container>
+  </ng-container>
+  <ng-container *ngIf="mode === modes.ELEMENT_AT_THIS_POSITION">
+    <ng-container
+      *ngTemplateOutlet="
+        positionFinder;
+        context: {
+          row: row,
+          col: col,
+          lastCol: lastCol,
+          colIndex: colIndex,
+          itemsRow: itemsRow,
+          ignoreSpecial: ignoreSpecial
+        }
+      "
+    ></ng-container>
+  </ng-container>
+  <ng-container *ngIf="mode === modes.WHO_AM_I">
+    <ng-container
+      *ngTemplateOutlet="
+        positionFinder;
+        context: {
+          row: row,
+          col: col,
+          lastCol: lastCol,
+          colIndex: colIndex,
+          itemsRow: itemsRow,
+          ignoreSpecial: ignoreSpecial,
+          highlightWhoAmI: true
+        }
+      "
+    ></ng-container>
+  </ng-container>
+  <ng-container *ngIf="mode === modes.FIND_MY_POSITION">
+    <ng-container
+      *ngTemplateOutlet="
+        positionFiller;
+        context: {
+          row: row,
+          col: col,
+          lastCol: lastCol,
+          colIndex: colIndex,
+          itemsRow: itemsRow,
+          ignoreSpecial: ignoreSpecial
+        }
+      "
+    ></ng-container>
+  </ng-container>
+</ng-template>
+
+<!-- Template to paint normal view of the element -->
+<ng-template
+  #singleElementTpl
+  let-item="item"
+  let-lastCol="lastCol"
+  let-colIndex="colIndex"
+  let-ignoreSpecial="ignoreSpecial"
+  let-isBig="isBig"
+  let-highlightOnHover="highlightOnHover"
+>
+  <div
+    class="
+      d-flex
+      periodic-table__element
+      align-items-center
+      justify-content-center
+    "
+    [class.periodic-table__element--last]="lastCol"
+    [class.periodic-table__element--no-right-item]="lastCol"
+    [class.periodic-table__element--empty]="!item"
+    [class.periodic-table__element--special]="!ignoreSpecial && colIndex === 2"
+    [class.periodic-table__element--highlighted]="isBig"
+    [class.cursor-pointer]="item"
+    [ngClass]="'periodic-table__element--' + item?.category"
+    (mouseenter)="highlightOnHover && onElementHover($event, item)"
+  >
+    <span class="periodic-table__symbol">{{ item?.symbol }}</span>
+    <span class="periodic-table__position">{{ item?.position }}</span>
+    <span class="periodic-table__name text-truncate">{{ item?.name }}</span>
+  </div>
+</ng-template>
+
+<!-- Template to paint big size element -->
+<ng-template #singleElementHighlightedTpl let-item="item">
+  <div
+    class="
+      d-flex
+      periodic-table__element periodic-table__element--highlighted
+      align-items-center
+      justify-content-center
+    "
+    [class.cursor-pointer]="item"
+    [ngClass]="'periodic-table__element--' + item?.category"
+    (mouseleave)="onElementLeave()"
+  >
+    <span class="periodic-table__symbol">{{ item?.symbol }}</span>
+    <span class="periodic-table__position">{{ item?.position }}</span>
+    <span class="periodic-table__name text-truncate">{{ item?.name }}</span>
+  </div>
+</ng-template>
+
+<!-- Template to paint the view for position finder mode -->
+<ng-template
+  #positionFinder
+  let-row="row"
+  let-col="col"
+  let-lastCol="lastCol"
+  let-colIndex="colIndex"
+  let-itemsRow="itemsRow"
+  let-ignoreSpecial="ignoreSpecial"
+  let-highlightWhoAmI="highlightWhoAmI"
+>
+  <div
+    class="
+      d-flex
+      periodic-table__element periodic-table__element--flip
+      align-items-center
+      justify-content-center
+    "
+    [class.periodic-table__element--last]="lastCol"
+    [class.periodic-table__element--no-right-item]="!itemsRow[col + 1]"
+    [class.periodic-table__element--empty]="!itemsRow[col]"
+    [class.periodic-table__element--special]="!ignoreSpecial && colIndex === 2"
+    [class.periodic-table__element--regular]="
+      itemsRow[col] &&
+      highlightWhoAmI &&
+      itemsRow[col]?.position !== nextWhoAmI?.position
+    "
+    [class.cursor-pointer]="itemsRow[col]"
+    [ngClass]="'periodic-table__element--' + itemsRow[col]?.category"
+  >
+    <div
+      class="flip-card w-100 h-100"
+      *ngIf="
+        !highlightWhoAmI || itemsRow[col]?.position === nextWhoAmI?.position
+      "
+    >
+      <div class="flip-card-inner">
+        <div
+          class="
+            flip-card-front
+            d-flex
+            align-items-center
+            justify-content-center
+          "
+        >
+          {{ itemsRow[col]?.position }}
+        </div>
+        <div
+          class="
+            flip-card-back
+            d-flex
+            align-items-center
+            justify-content-center
+          "
+        >
+          {{ itemsRow[col]?.symbol }}
+          <span class="periodic-table__position">{{
+            itemsRow[col]?.position
+          }}</span>
+          <span class="periodic-table__name text-truncate">{{
+            itemsRow[col]?.name
+          }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<!-- Template for position filler mode, supports drag and drop -->
+<ng-template
+  #positionFiller
+  let-row="row"
+  let-col="col"
+  let-lastCol="lastCol"
+  let-colIndex="colIndex"
+  let-itemsRow="itemsRow"
+  let-ignoreSpecial="ignoreSpecial"
+>
+  <div
+    class="
+      d-flex
+      periodic-table__element periodic-table__element--flip
+      align-items-center
+      justify-content-center
+      cursor-pointer
+    "
+    [class.periodic-table__element--last]="lastCol"
+    [class.periodic-table__element--no-right-item]="!itemsRow[col + 1]"
+    [class.periodic-table__element--empty]="!itemsRow[col]"
+    [class.periodic-table__element--special]="!ignoreSpecial && colIndex === 2"
+    [class.periodic-table__element--regular]="
+      itemsRow[col] && !itemsRow[col]?.visible
+    "
+    [ngClass]="'periodic-table__element--' + itemsRow[col]?.category"
+  >
+    <ng-container *ngIf="itemsRow[col]?.visible">
+      {{ itemsRow[col]?.symbol }}
+      <span class="periodic-table__position">{{
+        itemsRow[col]?.position
+      }}</span>
+      <span class="periodic-table__name text-truncate">{{
+        itemsRow[col]?.name
+      }}</span>
+    </ng-container>
+  </div>
+</ng-template>
